@@ -81,6 +81,12 @@ export function createTeamsReplyStreamController(params: {
   let tokensEmitted = false;
   let started = false;
   let canceledLocally = false;
+  // Set when `stream.emit/close` fails for a non-cancel reason after we've
+  // already started streaming. Differentiates "user pressed Stop" from "the
+  // stream broke under us"; the second case wants block-delivery fallback so
+  // the user gets the full reply instead of a truncated streamed prefix.
+  // Matches the pre-migration `TeamsHttpStream.hasContent → false` recovery.
+  let streamFailed = false;
   let lastInformativeText = "";
   let progressLines: string[] = [];
   // openclaw's reply pipeline calls onPartialReply with the cumulative text on
@@ -170,7 +176,15 @@ export function createTeamsReplyStreamController(params: {
           canceledLocally = true;
           return;
         }
-        throw err;
+        // Non-cancel failure: latch streamFailed so `preparePayload` lets
+        // block delivery happen even though tokens were already emitted.
+        // The user may see a duplicate (streamed prefix + full block reply)
+        // — that's intentional and matches the pre-migration recovery
+        // behavior; truncated-only is the worse outcome.
+        streamFailed = true;
+        params.log?.warn?.(
+          `msteams stream emit failed, falling back to block delivery: ${err instanceof Error ? err.message : String(err)}`,
+        );
       }
     },
 
@@ -252,8 +266,10 @@ export function createTeamsReplyStreamController(params: {
       }
       // Partial mode with tokens already streamed: stream carries the text;
       // strip text from the payload (keep media if any) so block delivery
-      // doesn't duplicate.
-      if (tokensEmitted) {
+      // doesn't duplicate. Exception: if a non-cancel stream failure was
+      // latched mid-flight, fall through to block delivery so the user gets
+      // the full reply instead of the truncated streamed prefix.
+      if (tokensEmitted && !streamFailed) {
         const hasMedia = Boolean(payload.mediaUrl || payload.mediaUrls?.length);
         return hasMedia ? { ...payload, text: undefined } : undefined;
       }
@@ -315,7 +331,16 @@ export function createTeamsReplyStreamController(params: {
           canceledLocally = true;
           return;
         }
-        throw err;
+        // Non-cancel failure during the closing emit/close. The streamed
+        // prefix is already visible to the user; the only loss is the
+        // closing activity (AI-Generated marker, feedback channelData).
+        // Latch streamFailed for parity with the mid-stream path and
+        // swallow the error — a thrown finalize would otherwise blow up
+        // the reply pipeline after the user already saw the response.
+        streamFailed = true;
+        params.log?.warn?.(
+          `msteams stream finalize failed: ${err instanceof Error ? err.message : String(err)}`,
+        );
       }
     },
 
@@ -324,7 +349,7 @@ export function createTeamsReplyStreamController(params: {
     },
 
     isStreamActive(): boolean {
-      return Boolean(stream) && tokensEmitted && !wasCanceled();
+      return Boolean(stream) && tokensEmitted && !wasCanceled() && !streamFailed;
     },
 
     wasCanceled,

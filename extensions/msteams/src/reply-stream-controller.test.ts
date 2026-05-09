@@ -182,13 +182,56 @@ describe("createTeamsReplyStreamController", () => {
       await expect(ctrl.finalize()).resolves.toBeUndefined();
     });
 
-    it("re-throws non-cancel errors from stream.emit", () => {
+    it("latches streamFailed (and does not throw) on non-cancel errors from stream.emit", () => {
       const stream = makeStream();
       stream.emit.mockImplementation(() => {
         throw new Error("network failure");
       });
       const ctrl = makeController({ stream });
-      expect(() => ctrl.onPartialReply({ text: "boom" })).toThrow("network failure");
+      // Must not propagate — the rest of the reply pipeline needs to keep
+      // running so preparePayload can fall back to block delivery.
+      expect(() => ctrl.onPartialReply({ text: "boom" })).not.toThrow();
+      // Stream is no longer considered active once it has failed.
+      expect(ctrl.isStreamActive()).toBe(false);
+    });
+
+    it("falls back to block delivery when stream.emit fails after tokens were emitted", () => {
+      const stream = makeStream();
+      const ctrl = makeController({ stream });
+      // First chunk succeeds — tokensEmitted goes true.
+      ctrl.onPartialReply({ text: "hello" });
+      expect(stream.emit).toHaveBeenCalledTimes(1);
+      // Second chunk fails for a non-cancel reason.
+      stream.emit.mockImplementation(() => {
+        throw new Error("network failure");
+      });
+      ctrl.onPartialReply({ text: "hello world" });
+      // Without the streamFailed latch, preparePayload would suppress the
+      // payload because tokens were emitted; the user would see only "hello".
+      // With the latch, block delivery sends the full final reply.
+      const result = ctrl.preparePayload({ text: "hello world final" });
+      expect(result).toEqual(expect.objectContaining({ text: "hello world final" }));
+    });
+
+    it("preserves the no-duplicate behavior on the happy path (no failure)", () => {
+      const stream = makeStream();
+      const ctrl = makeController({ stream });
+      ctrl.onPartialReply({ text: "hello" });
+      // No failure — preparePayload should still suppress block delivery so
+      // the streamed text isn't duplicated.
+      expect(ctrl.preparePayload({ text: "hello world" })).toBeUndefined();
+    });
+
+    it("swallows non-cancel errors from stream.close during finalize", async () => {
+      const stream = makeStream();
+      const ctrl = makeController({ stream });
+      ctrl.onPartialReply({ text: "partial" });
+      stream.close.mockImplementation(async () => {
+        throw new Error("close failed");
+      });
+      // Finalize must not propagate — the user already saw the streamed
+      // content; throwing here would blow up the dispatcher after success.
+      await expect(ctrl.finalize()).resolves.toBeUndefined();
     });
 
     it("treats post-cancel stream as inactive without further emit attempts", () => {
