@@ -67,6 +67,7 @@ const TELEGRAM_TEST_TIMINGS = {
 } as const;
 
 const CHANNEL_ID = -100777111222;
+let nextAlbumMessageId = 600;
 
 function setOpenChannelPostConfig() {
   loadConfig.mockReturnValue({
@@ -142,7 +143,8 @@ async function queueChannelPostAlbum(
   handler: (ctx: Record<string, unknown>) => Promise<void>,
   params: { caption: string; mediaGroupId: string; photoFileIds: string[] },
 ) {
-  const baseMessageId = 600;
+  const baseMessageId = nextAlbumMessageId;
+  nextAlbumMessageId += params.photoFileIds.length + 100;
   const calls = params.photoFileIds.map((fileId, index) =>
     handler(
       createChannelPostContext({
