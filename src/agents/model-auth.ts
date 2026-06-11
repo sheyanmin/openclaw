@@ -272,6 +272,13 @@ export function resolveUsableCustomProviderApiKey(params: {
   const apiKeyRef = coerceSecretRef(customProviderConfig?.apiKey);
   if (apiKeyRef) {
     if (apiKeyRef.source !== "env") {
+      const runtimeConfig = getRuntimeConfigSnapshot();
+      if (runtimeConfig && runtimeConfig !== params.cfg) {
+        const runtimeKey = getCustomProviderApiKey(runtimeConfig, params.provider);
+        if (runtimeKey && !isNonSecretApiKeyMarker(runtimeKey)) {
+          return { apiKey: runtimeKey, source: "models.json (runtime snapshot)" };
+        }
+      }
       return null;
     }
     const envVarName = apiKeyRef.id.trim();
