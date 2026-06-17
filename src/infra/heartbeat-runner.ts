@@ -1842,23 +1842,12 @@ export async function runHeartbeatOnce(opts: {
     const ackMaxChars = resolveHeartbeatAckMaxChars(cfg, heartbeat);
     const responsePrefix = resolveHeartbeatResponsePrefix();
 
-    if (
-      usesHeartbeatResponseTool &&
-      !heartbeatToolResponse &&
-      !hasRelayableExecCompletion &&
-      !hasDueCommitments &&
-      !hasCronEvents &&
-      !hasExecCompletion
-    ) {
-      // Model produced private final text without calling the heartbeat_respond
-      // tool in message_tool_only mode. Keep the response private instead of
-      // leaking it to the source channel.
+    if (usesHeartbeatResponseTool && !heartbeatToolResponse) {
       await restoreHeartbeatUpdatedAt({
         storePath,
         sessionKey,
         updatedAt: previousUpdatedAt,
       });
-
       const okSent = await maybeSendHeartbeatOk();
       emitHeartbeatEvent({
         status: "ok-token",
