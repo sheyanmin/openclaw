@@ -141,9 +141,17 @@ export function setPluginSubagentOverridePolicies(cfg: OpenClawConfig): void {
   const normalized = normalizePluginsConfig(cfg.plugins);
   const policies: PluginSubagentPolicyState["policies"] = {};
   for (const [pluginId, entry] of Object.entries(normalized.entries)) {
-    const allowModelOverride = entry.subagent?.allowModelOverride === true;
-    const hasConfiguredAllowlist = entry.subagent?.hasAllowedModelsConfig === true;
-    const configuredAllowedModels = entry.subagent?.allowedModels ?? [];
+    // Merge subagent and llm policies so plugins using llm.allowModelOverride
+    // (e.g. LCM compaction) are authorized without requiring a hot-reload.
+    const allowModelOverride =
+      entry.subagent?.allowModelOverride === true || entry.llm?.allowModelOverride === true;
+    const hasConfiguredAllowlist =
+      entry.subagent?.hasAllowedModelsConfig === true ||
+      entry.llm?.hasAllowedModelsConfig === true;
+    const configuredAllowedModels = [
+      ...(entry.subagent?.allowedModels ?? []),
+      ...(entry.llm?.allowedModels ?? []),
+    ];
     const allowedModels = new Set<string>();
     let allowAnyModel = false;
     for (const modelRef of configuredAllowedModels) {
