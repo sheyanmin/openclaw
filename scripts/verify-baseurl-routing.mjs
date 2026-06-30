@@ -9,7 +9,6 @@
  * routes embedding requests to the configured endpoint.
  */
 import { createServer } from "node:http";
-import { randomUUID } from "node:crypto";
 
 const PORT = 19999;
 const PATH = "/v1/embeddings";
