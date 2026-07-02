@@ -352,7 +352,11 @@ export async function downloadMSTeamsGraphMedia(params: {
           attachments?: GraphAttachment[];
         };
         try {
-          msgData = (await msgRes.json()) as typeof msgData;
+          const msgBytes = await readResponseWithLimit(msgRes, MSTEAMS_GRAPH_JSON_MAX_BYTES, {
+            onOverflow: ({ size, maxBytes }) =>
+              new Error(`MS Teams Graph message response exceeds ${maxBytes} bytes (got ${size})`),
+          });
+          msgData = JSON.parse(new TextDecoder().decode(msgBytes)) as typeof msgData;
         } catch (err) {
           debugLog?.debug?.("graph media message parse failed", {
             messageUrl,
