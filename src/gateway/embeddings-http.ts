@@ -173,7 +173,10 @@ async function createConfiguredEmbeddingProvider(params: {
       providerCfg.api === "openai-completions" ||
       providerCfg.api === "openai-responses"),
   );
-  if (adapter && (!hasCustomBaseUrl || !isOpenAICompat)) {
+  // Preserve the direct adapter for canonical "openai" provider id
+  // to match memory-core and memory-search behavior.  The OpenAI
+  // adapter already reads baseUrl from config.
+  if (adapter && (!hasCustomBaseUrl || !isOpenAICompat || providerId === "openai")) {
     const provider = await createWithAdapter(adapter);
     if (!provider) {
       throw new Error(`Memory embedding provider ${providerId} is unavailable.`);

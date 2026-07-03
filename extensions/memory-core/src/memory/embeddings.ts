@@ -162,7 +162,10 @@ function getAdapter(
       | undefined;
     if (providerConfig) {
       const hasCustomBaseUrl = Boolean(providerConfig.baseUrl?.trim());
-      if (!hasCustomBaseUrl || !isOpenAICompatibleApi(providerConfig.api)) {
+      // Preserve the direct adapter for canonical "openai" provider id.
+      // The OpenAI adapter already reads baseUrl from config and skipping
+      // it changes runtime identity, cache keys, and batching behavior.
+      if (!hasCustomBaseUrl || !isOpenAICompatibleApi(providerConfig.api) || id === "openai") {
         return adapter;
       }
     } else {
