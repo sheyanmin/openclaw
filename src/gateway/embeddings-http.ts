@@ -167,11 +167,12 @@ async function createConfiguredEmbeddingProvider(params: {
     | { baseUrl?: string; api?: string }
     | undefined;
   const hasCustomBaseUrl = Boolean(providerCfg?.baseUrl?.trim());
-  const isOpenAICompat =
-    !providerCfg?.api ||
-    providerCfg.api === "openai" ||
-    providerCfg.api === "openai-completions" ||
-    providerCfg.api === "openai-responses";
+  const isOpenAICompat = Boolean(
+    providerCfg?.api &&
+    (providerCfg.api === "openai" ||
+      providerCfg.api === "openai-completions" ||
+      providerCfg.api === "openai-responses"),
+  );
   if (adapter && (!hasCustomBaseUrl || !isOpenAICompat)) {
     const provider = await createWithAdapter(adapter);
     if (!provider) {
