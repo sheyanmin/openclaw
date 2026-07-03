@@ -140,9 +140,11 @@ export function listControlledSubagentRuns(controllerSessionKey: string): Subage
   const snapshot = getSubagentRunsSnapshotForRead(subagentRuns);
   const latestByChildSessionKey = buildLatestSubagentRunIndex(snapshot).latestByChildSessionKey;
   const filtered = Array.from(latestByChildSessionKey.values()).filter((entry) => {
-    const latestControllerSessionKey =
-      entry.controllerSessionKey?.trim() || entry.requesterSessionKey?.trim();
-    return latestControllerSessionKey === key;
+    const controllerKey = entry.controllerSessionKey?.trim();
+    const requesterKey = entry.requesterSessionKey?.trim();
+    if (controllerKey && controllerKey === key) return true;
+    if (requesterKey && requesterKey === key) return true;
+    return false;
   });
   return sortSubagentRuns(filtered);
 }
