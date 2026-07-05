@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { GatewayClient } from "../gateway/client.js";
 import { withEnvAsync } from "../test-utils/env.js";
 import type { SkillBinsProvider } from "./invoke-types.js";
-import { handleInvoke } from "./invoke.js";
+import { handleInvoke, truncateOutput } from "./invoke.js";
 
 describe("node host invoke", () => {
   it.runIf(process.platform !== "win32")(
@@ -188,5 +188,38 @@ describe("node host invoke", () => {
       execPolicy?: { security?: string; ask?: string };
     };
     expect(payload.execPolicy).toEqual({ security: "allowlist", ask: "on-miss" });
+  });
+});
+
+describe("truncateOutput", () => {
+  it("returns text unchanged when shorter than maxChars", () => {
+    const result = truncateOutput("hello", 100);
+    expect(result).toEqual({ text: "hello", truncated: false });
+  });
+
+  it("truncates ASCII text without splitting", () => {
+    const result = truncateOutput("abcdefghij", 5);
+    expect(result.truncated).toBe(true);
+    expect(result.text).toContain("... (truncated)");
+    expect(result.text.endsWith("fghij")).toBe(true);
+  });
+
+  it("preserves surrogate pairs at truncation boundary", () => {
+    // 10 emoji = 20 UTF-16 code units; keep last 5 code units
+    const raw = "😀".repeat(10);
+    const result = truncateOutput(raw, 5);
+    expect(result.truncated).toBe(true);
+    // Must be well-formed — no lone surrogate at the start
+    const tail = result.text.replace("... (truncated) ", "");
+    expect(tail.isWellFormed()).toBe(true);
+  });
+
+  it("preserves CJK extension B characters at truncation boundary", () => {
+    // 𐍈 = U+10348, a supplementary plane character (surrogate pair in UTF-16)
+    const raw = "𐍈".repeat(10);
+    const result = truncateOutput(raw, 5);
+    expect(result.truncated).toBe(true);
+    const tail = result.text.replace("... (truncated) ", "");
+    expect(tail.isWellFormed()).toBe(true);
   });
 });

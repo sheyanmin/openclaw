@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { normalizeLowercaseStringOrEmpty } from "@openclaw/normalization-core/string-coerce";
 import { normalizeStringEntries } from "@openclaw/normalization-core/string-normalization";
+import { sliceUtf16Safe } from "@openclaw/normalization-core/utf16-slice";
 import { GatewayClient } from "../gateway/client.js";
 import {
   analyzeArgvCommand,
@@ -226,11 +227,15 @@ export function sanitizeEnv(overrides?: Record<string, string> | null): Record<s
   return sanitizeHostExecEnv({ overrides, blockPathOverrides: true });
 }
 
-function truncateOutput(raw: string, maxChars: number): { text: string; truncated: boolean } {
+export function truncateOutput(
+  raw: string,
+  maxChars: number,
+): { text: string; truncated: boolean } {
   if (raw.length <= maxChars) {
     return { text: raw, truncated: false };
   }
-  return { text: `... (truncated) ${raw.slice(raw.length - maxChars)}`, truncated: true };
+  const tail = sliceUtf16Safe(raw, raw.length - maxChars);
+  return { text: `... (truncated) ${tail}`, truncated: true };
 }
 
 export function decodeCapturedOutputBuffer(params: {
