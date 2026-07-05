@@ -2948,7 +2948,7 @@ example
     expect(logs?.[0]?.timestamp).toBe(0);
     // Valid timestamp should parse correctly
     expect(logs?.[1]?.timestamp).toBeGreaterThan(0);
-    expect(Number.isFinite(logs?.[1]?.timestamp ?? NaN)).toBe(true);
+    expect(Number.isFinite(logs?.[1]?.timestamp ?? Number.NaN)).toBe(true);
   });
 
   it("buckets hourly message counts into UTC quarter-hour slots", async () => {
