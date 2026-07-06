@@ -475,18 +475,23 @@ describe("downloadMSTeamsGraphMedia attachment sourcing and error logging", () =
 
   it("propagates oversized collection response (> 256 KiB) error up the call stack", async () => {
     // Build a hostedContents collection response exceeding the 256 KiB cap.
-    const oversizedCollection = JSON.stringify({
+    const fetchCalls: string[] = [];
+    const oversizedBody = JSON.stringify({
       value: Array.from({ length: 50000 }, (_, i) => ({
         id: `big-${i}`,
         contentType: "image/png",
         contentBytes: null,
       })),
     });
-    const fetchCalls: string[] = [];
     mockGraphMediaFetch({
       messageId: "msg-collection-over",
       messageResponse: { body: {}, attachments: [{ id: "att-1", contentType: "reference" }] },
-      hostedContents: oversizedCollection,
+      valueResponses: {
+        "/hostedContents": new Response(oversizedBody, {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        }),
+      },
       fetchCalls,
     });
 
