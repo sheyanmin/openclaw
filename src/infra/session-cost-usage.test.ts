@@ -2919,7 +2919,7 @@ example
     expect(logs?.[0]?.content).toBe("hello there");
   });
 
-  it("defaults timestamp to 0 when a malformed timestamp string is unparseable", async () => {
+  it("normalizes malformed log timestamps with the transcript timestamp rules", async () => {
     const root = await makeSessionCostRoot("logs-malformed-timestamp");
     const sessionsDir = path.join(root, "agents", "main", "sessions");
     await fs.mkdir(sessionsDir, { recursive: true });
@@ -2935,6 +2935,15 @@ example
         }),
         JSON.stringify({
           type: "message",
+          timestamp: "still-not-a-valid-date-string",
+          message: {
+            role: "assistant",
+            content: "nested timestamp entry",
+            timestamp: Date.parse("2026-02-21T17:46:00.000Z"),
+          },
+        }),
+        JSON.stringify({
+          type: "message",
           timestamp: "2026-02-21T17:47:00.000Z",
           message: { role: "assistant", content: "valid timestamp entry" },
         }),
@@ -2943,9 +2952,10 @@ example
     );
 
     const logs = await loadSessionLogs({ sessionFile });
-    expect(logs).toHaveLength(2);
+    expect(logs).toHaveLength(3);
     expect(logs?.[0]?.timestamp).toBe(0);
-    expect(logs?.[1]?.timestamp).toBe(Date.parse("2026-02-21T17:47:00.000Z"));
+    expect(logs?.[1]?.timestamp).toBe(Date.parse("2026-02-21T17:46:00.000Z"));
+    expect(logs?.[2]?.timestamp).toBe(Date.parse("2026-02-21T17:47:00.000Z"));
   });
 
   it("buckets hourly message counts into UTC quarter-hour slots", async () => {
