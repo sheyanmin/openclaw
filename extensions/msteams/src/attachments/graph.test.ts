@@ -120,6 +120,11 @@ function mockGraphMediaFetch(options: {
       );
     }
     if (url.endsWith("/hostedContents")) {
+      for (const [fragment, response] of Object.entries(options.valueResponses ?? {})) {
+        if (url.includes(fragment)) {
+          return guardedFetchResult(params, response);
+        }
+      }
       return guardedFetchResult(params, mockFetchResponse({ value: options.hostedContents ?? [] }));
     }
     for (const [fragment, response] of Object.entries(options.valueResponses ?? {})) {
