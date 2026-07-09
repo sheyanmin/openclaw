@@ -5,6 +5,7 @@ import path from "node:path";
 import { runFfmpeg } from "openclaw/plugin-sdk/media-runtime";
 import { createSubsystemLogger } from "openclaw/plugin-sdk/runtime-env";
 import { writeExternalFileWithinRoot } from "openclaw/plugin-sdk/security-runtime";
+import { truncateUtf16Safe } from "openclaw/plugin-sdk/text-utility-runtime";
 import type {
   SpeechProviderConfig,
   SpeechProviderPlugin,
@@ -374,7 +375,7 @@ export function buildCliSpeechProvider(): SpeechProviderPlugin {
         throw new Error("CLI TTS not configured");
       }
 
-      log.debug(`synthesize: text=${req.text.slice(0, 50)}...`);
+      log.debug(`synthesize: text=${truncateUtf16Safe(req.text, 50)}...`);
 
       const temp = await tempWorkspace({
         rootDir: resolvePreferredOpenClawTmpDir(),
@@ -447,7 +448,7 @@ export function buildCliSpeechProvider(): SpeechProviderPlugin {
         throw new Error("CLI TTS not configured");
       }
 
-      log.debug(`synthesizeTelephony: text=${req.text.slice(0, 50)}...`);
+      log.debug(`synthesizeTelephony: text=${truncateUtf16Safe(req.text, 50)}...`);
 
       const temp = await tempWorkspace({
         rootDir: resolvePreferredOpenClawTmpDir(),
