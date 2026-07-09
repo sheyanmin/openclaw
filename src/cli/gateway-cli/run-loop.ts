@@ -12,6 +12,7 @@ import {
 import type { startGatewayServer } from "../../gateway/server.js";
 import { formatErrorMessage } from "../../infra/errors.js";
 import type { GatewayBootLifecycleCompletion } from "../../infra/gateway-boot-lifecycle.js";
+import { truncateUtf16Safe } from "@openclaw/normalization-core/utf16-slice";
 import { acquireGatewayLock } from "../../infra/gateway-lock.js";
 import { createSubsystemLogger } from "../../logging/subsystem.js";
 import type { RuntimeEnv } from "../../runtime.js";
@@ -918,7 +919,7 @@ export async function runGatewayLoop(params: {
       } catch (err) {
         params.completeBoot?.({
           outcome: "startup_failed",
-          reason: formatErrorMessage(err).slice(0, 500),
+          reason: truncateUtf16Safe(formatErrorMessage(err), 500),
         });
         // On initial startup, let the error propagate so the outer handler
         // can report "Gateway failed to start" and exit non-zero. Only
