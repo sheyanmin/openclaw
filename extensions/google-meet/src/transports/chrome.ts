@@ -416,6 +416,11 @@ function meetStatusScript(params: {
       const label = buttonLabel(button);
       return pattern.test(label) && !/remotely mute|someone else/i.test(label) && !button.disabled;
     });
+  const findByIcon = (iconName) =>
+    buttons.find((button) => {
+      const icon = button.querySelector("i.material-icons");
+      return icon?.textContent?.trim() === iconName && !button.disabled;
+    });
   const input = [...document.querySelectorAll('input')].find((el) =>
     /your name/i.test(el.getAttribute('aria-label') || el.placeholder || '')
   );
@@ -430,7 +435,7 @@ function meetStatusScript(params: {
   const host = location.hostname.toLowerCase();
   const pageUrl = location.href;
   const permissionNeeded = /permission needed|microphone problem|speaker problem|allow.*(microphone|camera)|blocked.*(microphone|camera)|permission.*(microphone|camera|speaker)/i.test(permissionText);
-  let mic = findCallControlButton(/^\\s*turn (?:off|on) microphone\\b/i);
+  let mic = findCallControlButton(/^\\s*turn (?:off|on) microphone\\b/i) || findByIcon("mic") || findByIcon("mic_off");
   if (!mic) {
     const callControls = document.querySelector('[role="region"][aria-label="Call controls"]');
     mic = [...(callControls?.querySelectorAll('button') || [])].find((button) =>
@@ -445,9 +450,9 @@ function meetStatusScript(params: {
     mic.click();
     notes.push("Muted Meet microphone for observe-only mode.");
   }
-  const joinElsewhere = findButton(/join here too/i);
+  const joinElsewhere = findButton(/join here too/i) || findByIcon("person_add");
   const join = !readOnly && ${JSON.stringify(params.autoJoin)}
-    ? findButton(/join now|ask to join/i)
+    ? findButton(/join now|ask to join/i) || findByIcon("phone_in_talk")
     : null;
   if (join) join.click();
   const microphoneChoice = findButton(/\\buse microphone\\b/i);
@@ -459,7 +464,7 @@ function meetStatusScript(params: {
     noMicrophoneChoice.click();
     notes.push("Skipped Meet microphone prompt for observe-only mode.");
   }
-  const inCall = buttons.some((button) => /leave call/i.test(button.getAttribute('aria-label') || text(button)));
+  const inCall = buttons.some((button) => /leave call/i.test(button.getAttribute('aria-label') || text(button))) || Boolean(findByIcon('call_end'));
   const routeMeetAudioOutput = async () => {
     if (
       !allowMicrophone ||
@@ -560,7 +565,7 @@ function meetStatusScript(params: {
   };
   if (captionState) {
     if (!readOnly && inCall && !captionState.enabledAttempted) {
-      const captionButton = findButton(/turn on captions|show captions|captions/i);
+      const captionButton = findButton(/turn on captions|show captions|captions/i) || findByIcon("closed_caption") || findByIcon("closed_caption_off");
       const captionLabel = captionButton ? (captionButton.getAttribute("aria-label") || captionButton.getAttribute("data-tooltip") || text(captionButton)) : "";
       if (captionButton) {
         captionState.enabledAttempted = true;
