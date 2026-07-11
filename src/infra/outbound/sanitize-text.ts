@@ -40,7 +40,7 @@ export function sanitizeForPlainText(text: string): string {
     // Strikethrough → WhatsApp/Signal strikethrough
     .replace(/<(s|strike|del)>(.*?)<\/\1>/gi, "~$2~")
     // Inline code
-    .replace(/<code>(.*?)<\/code>/gi, "`$1`")
+    .replace(/<code[^>]*>(.*?)<\/code>/gi, "`$1`")
     // Headings → bold text with newline
     .replace(/<h[1-6][^>]*>(.*?)<\/h[1-6]>/gi, "\n*$1*\n")
     // List items → bullet points
