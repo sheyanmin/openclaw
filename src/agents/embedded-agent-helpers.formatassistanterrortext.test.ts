@@ -76,7 +76,17 @@ describe("formatAssistantErrorText", () => {
       '429 status code (exceeded limit)\n{"code":1305,"message":"The service may be temporarily overloaded, please try again later."}',
     );
     expect(formatAssistantErrorText(msg)).toBe(
-      "⚠️ Provider returned code 1305 (\"overloaded\"). This may indicate system prompt content triggered a provider filter rather than a transient overload — try a different model or system prompt, or retry.",
+      '⚠️ Provider returned code 1305 ("overloaded"). This may indicate system prompt content triggered a provider filter rather than a transient overload — try a different model or system prompt, or retry.',
+    );
+  });
+  it("matches canonical z.ai payload with quoted code value (#103529)", () => {
+    // The real z.ai Coding Plan response has the code as a quoted string
+    // nested inside {"error":{...}}.
+    const msg = makeAssistantError(
+      '{"error":{"code":"1305","message":"The service may be temporarily overloaded, please try again later."}}',
+    );
+    expect(formatAssistantErrorText(msg)).toBe(
+      '⚠️ Provider returned code 1305 ("overloaded"). This may indicate system prompt content triggered a provider filter rather than a transient overload — try a different model or system prompt, or retry.',
     );
   });
   it("rewrites generic provider internal errors without support request ids", () => {
