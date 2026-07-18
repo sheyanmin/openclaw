@@ -316,7 +316,9 @@ describe("ChatStateController render lifecycle", () => {
     } as unknown as ChatPageHost;
 
     state.handleChatInputHistoryKey = vi.fn((input: { key: string }) => {
-      if (input.key !== "ArrowUp") return { handled: false };
+      if (input.key !== "ArrowUp") {
+        return { handled: false };
+      }
       state.chatMessage = "previous draft";
       return { handled: true };
     }) as ChatPageHost["handleChatInputHistoryKey"];
