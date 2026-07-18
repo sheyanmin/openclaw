@@ -72,6 +72,17 @@ describe("usage-bar verbs", () => {
     expect(render([{ text: "{x|meter:1:moon}" }], { x: 100 })).toBe("🌕");
   });
 
+  it("meter — rejects out-of-range and non-integer widths", () => {
+    // width 0: meter returns "" for width < 1; || 5 previously swallowed 0
+    expect(render([{ text: "{x|meter:0:braille}" }], { x: 75 })).toBe("");
+    // text width: parseStrictInteger returns undefined
+    expect(render([{ text: "{x|meter:abc:braille}" }], { x: 75 })).toBe("");
+    // negative width
+    expect(render([{ text: "{x|meter:-1:braille}" }], { x: 75 })).toBe("");
+    // width above maximum (40)
+    expect(render([{ text: "{x|meter:99:braille}" }], { x: 75 })).toBe("");
+  });
+
   it("alias — listed shortens, unlisted echoes through", () => {
     expect(render([{ text: "{m|alias:models}" }], { m: "claude-opus-4-6" })).toBe("opus46");
     expect(render([{ text: "{m|alias:models}" }], { m: "some-new-model" })).toBe("some-new-model");
