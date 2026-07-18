@@ -72,18 +72,20 @@ describe("usage-bar verbs", () => {
     expect(render([{ text: "{x|meter:1:moon}" }], { x: 100 })).toBe("🌕");
   });
 
-  it("meter — rejects out-of-range and non-integer widths", () => {
-    // width 0: || 5 previously swallowed 0
-    expect(render([{ text: "{x|meter:0:braille}" }], { x: 75 })).toBe("");
-    // text width: parseStrictInteger returns undefined
-    expect(render([{ text: "{x|meter:abc:braille}" }], { x: 75 })).toBe("");
-    // negative width
-    expect(render([{ text: "{x|meter:-1:braille}" }], { x: 75 })).toBe("");
-    // width 100 at upper bound is preserved
+  it("meter — preserves default and supported explicit widths", () => {
+    expect(render([{ text: "{x|meter::braille}" }], { x: 75 })).toBe("⣿⣿⣿⣧⠐");
+    expect(render([{ text: "{x|meter:   :braille}" }], { x: 75 })).toBe("⣿⣿⣿⣧⠐");
+    expect(render([{ text: "{x|meter:+5:braille}" }], { x: 75 })).toBe("⣿⣿⣿⣧⠐");
+    expect(render([{ text: "{x|meter: 5 :braille}" }], { x: 75 })).toBe("⣿⣿⣿⣧⠐");
     expect(render([{ text: "{x|meter:100:braille}" }], { x: 50 })).toHaveLength(100);
-    // width 101 above maximum is rejected
-    expect(render([{ text: "{x|meter:101:braille}" }], { x: 75 })).toBe("");
   });
+
+  it.each(["0", "-1", "2.5", "101", "1e2", "2junk", "abc", "9007199254740992"])(
+    "meter — rejects invalid width %s",
+    (width) => {
+      expect(render([{ text: `{x|meter:${width}:braille}` }], { x: 75 })).toBe("");
+    },
+  );
 
   it("alias — listed shortens, unlisted echoes through", () => {
     expect(render([{ text: "{m|alias:models}" }], { m: "claude-opus-4-6" })).toBe("opus46");
