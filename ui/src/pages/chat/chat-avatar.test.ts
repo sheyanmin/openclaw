@@ -4,8 +4,6 @@ import { render } from "lit";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { refreshChatAvatar, renderChatAvatar } from "./chat-avatar.ts";
 
-vi.unmock("../../lib/agents/display.ts");
-
 function renderAvatar(params: Parameters<typeof renderChatAvatar>) {
   const container = document.createElement("div");
   render(renderChatAvatar(...params), container);

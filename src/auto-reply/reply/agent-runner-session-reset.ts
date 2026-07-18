@@ -1,10 +1,9 @@
 // Handles session reset requests produced during agent runner execution.
+import { transitionMainSessionRecovery } from "../../agents/main-session-recovery-state.js";
 import type { SessionEntry } from "../../config/sessions.js";
-import {
-  resolveAgentIdFromSessionKey,
-  resolveSessionTranscriptPath,
-} from "../../config/sessions.js";
+import { resolveAgentIdFromSessionKey } from "../../config/sessions.js";
 import { persistSessionResetLifecycle } from "../../config/sessions/session-accessor.js";
+import { formatSqliteSessionFileMarker } from "../../config/sessions/sqlite-marker.js";
 import { generateSecureUuid } from "../../infra/secure-random.js";
 import { defaultRuntime } from "../../runtime.js";
 import {
@@ -27,7 +26,7 @@ const deps = {
   error: (message: string) => defaultRuntime.error(message),
 };
 
-export function setAgentRunnerSessionResetTestDeps(overrides?: Partial<typeof deps>): void {
+function setAgentRunnerSessionResetTestDeps(overrides?: Partial<typeof deps>): void {
   Object.assign(deps, {
     generateSecureUuid,
     persistSessionResetLifecycle,
@@ -35,6 +34,12 @@ export function setAgentRunnerSessionResetTestDeps(overrides?: Partial<typeof de
     error: (message: string) => defaultRuntime.error(message),
     ...overrides,
   });
+}
+
+if (process.env.VITEST || process.env.NODE_ENV === "test") {
+  (globalThis as Record<PropertyKey, unknown>)[
+    Symbol.for("openclaw.agentRunnerSessionResetTestApi")
+  ] = { setAgentRunnerSessionResetTestDeps };
 }
 
 export async function resetReplyRunSession(params: {
@@ -97,12 +102,13 @@ export async function resetReplyRunSession(params: {
     memoryFlushLastFailedAt: undefined,
     memoryFlushLastFailureError: undefined,
   };
+  transitionMainSessionRecovery(nextEntry, { kind: "clear" });
   const agentId = resolveAgentIdFromSessionKey(params.sessionKey);
-  const nextSessionFile = resolveSessionTranscriptPath(
-    nextSessionId,
+  const nextSessionFile = formatSqliteSessionFileMarker({
     agentId,
-    params.messageThreadId,
-  );
+    sessionId: nextSessionId,
+    storePath: params.storePath,
+  });
   nextEntry.sessionFile = nextSessionFile;
   params.activeSessionStore[params.sessionKey] = nextEntry;
   try {
