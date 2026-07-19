@@ -168,6 +168,45 @@ describe("Canvas tool", () => {
     );
   });
 
+  it("sends only defined placement coords to canvas.present", async () => {
+    mocks.callGatewayTool.mockResolvedValue({ payload: {} });
+    const tool = createCanvasTool();
+
+    await tool.execute("tool-call-1", {
+      action: "present",
+      width: "640",
+      height: "480",
+    });
+
+    // Only width and height are defined — x and y must not appear.
+    expect(mocks.callGatewayTool).toHaveBeenLastCalledWith(
+      "node.invoke",
+      {},
+      expect.objectContaining({
+        command: "canvas.present",
+        params: {
+          placement: { width: 640, height: 480 },
+        },
+      }),
+    );
+  });
+
+  it("omits placement key when no coords are defined", async () => {
+    mocks.callGatewayTool.mockResolvedValue({ payload: {} });
+    const tool = createCanvasTool();
+
+    await tool.execute("tool-call-1", {
+      action: "present",
+      target: "https://example.com",
+    });
+
+    const callArgs = mocks.callGatewayTool.mock.calls.at(-1)?.[2] as {
+      params?: Record<string, unknown>;
+    };
+    expect(callArgs.params).not.toHaveProperty("placement");
+    expect(callArgs.params).toEqual({ url: "https://example.com" });
+  });
+
   it("preserves an empty canvas eval result", async () => {
     mocks.callGatewayTool.mockResolvedValue({ payload: { result: "" } });
     const tool = createCanvasTool();
